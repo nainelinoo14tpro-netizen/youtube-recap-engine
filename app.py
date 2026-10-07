@@ -5,7 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from yt_dlp import YoutubeDL
-from moviepy.editor import VideoFileClip, concatenate_videoclips
+
+# MoviePy v1 ရော v2 မှာပါ အလုပ်လုပ်စေရန် import စနစ်
+try:
+    from moviepy import VideoFileClip, concatenate_videoclips
+except ImportError:
+    from moviepy.editor import VideoFileClip, concatenate_videoclips
 
 app = FastAPI()
 
@@ -38,6 +43,7 @@ def render_video(req: RenderRequest):
     output_file = f"recap_{timestamp}.mp4"
 
     try:
+        # YouTube ဗီဒီယို ဒေါင်းလုဒ်ဆွဲခြင်း (720p)
         ydl_opts = {
             'format': 'bestvideo[height<=720]+bestaudio/best[height<=720]',
             'outtmpl': source_file,
@@ -46,6 +52,7 @@ def render_video(req: RenderRequest):
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([video_url])
 
+        # Highlight အပိုင်းများကို ဖြတ်တောက် ပေါင်းစပ်ခြင်း
         main_video = VideoFileClip(source_file)
         clips = []
         for s in scenes:
@@ -54,7 +61,7 @@ def render_video(req: RenderRequest):
             if end_t > main_video.duration:
                 end_t = main_video.duration
             if start_t < end_t:
-                clips.append(main_video.subclip(start_t, end_t))
+                clips.append(main_video.subclipped(start_t, end_t) if hasattr(main_video, 'subclipped') else main_video.subclip(start_t, end_t))
 
         if not clips:
             raise Exception("No valid clips could be extracted")
